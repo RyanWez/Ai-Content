@@ -1,5 +1,5 @@
-import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react';
-import { Tone } from './types/types';
+import React, { useState, useCallback, Suspense, lazy, useEffect, useRef } from 'react';
+import { Tone, HistoryItem } from './types/types';
 import { 
   TONE_OPTIONS, 
   MIN_CONTENT_LENGTH, 
@@ -12,6 +12,8 @@ import {
 import apiService from './services/apiService';
 import Icon from './components/Icon';
 import CustomSelect from './components/CustomSelect';
+import HistorySidebar from './components/HistorySidebar';
+import { useContentHistory } from './hooks/useContentHistory';
 
 // Lazy load ReactMarkdown for code splitting
 const ReactMarkdown = lazy(() => import('react-markdown'));
@@ -26,6 +28,11 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState<boolean>(false);
     const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+    const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState<boolean>(false);
+    const [announcement, setAnnouncement] = useState<string>('');
+    
+    const mainContentRef = useRef<HTMLDivElement>(null);
+    const { history, saveToHistory, deleteHistoryItem, clearHistory, exportHistory } = useContentHistory();
 
     // Check server health on mount
     useEffect(() => {
@@ -39,17 +46,20 @@ const App: React.FC = () => {
     const handleGenerate = useCallback(async () => {
         if (!topic.trim()) {
             setError('Topic cannot be empty.');
+            setAnnouncement('Error: Topic cannot be empty');
             return;
         }
 
         if (serverStatus === 'offline') {
             setError('Server is offline. Please ensure the backend server is running.');
+            setAnnouncement('Error: Server is offline');
             return;
         }
 
         setIsLoading(true);
         setError(null);
         setGeneratedContent('');
+        setAnnouncement('Generating content, please wait');
 
         try {
             const content = await apiService.generateContent(
@@ -59,6 +69,8 @@ const App: React.FC = () => {
                 contentLength
             );
             setGeneratedContent(content);
+            saveToHistory(topic.trim(), tone, keywords.trim(), contentLength, content);
+            setAnnouncement('Content generated successfully');
             
             // Focus on output section for accessibility
             setTimeout(() => {
@@ -67,11 +79,12 @@ const App: React.FC = () => {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
             setError(errorMessage);
+            setAnnouncement(`Error: ${errorMessage}`);
             console.error('Generation error:', err);
         } finally {
             setIsLoading(false);
         }
-    }, [topic, tone, keywords, contentLength, serverStatus]);
+    }, [topic, tone, keywords, contentLength, serverStatus, saveToHistory]);
 
     const handleCopyToClipboard = useCallback(() => {
         if (!generatedContent) return;
@@ -79,11 +92,13 @@ const App: React.FC = () => {
         navigator.clipboard.writeText(generatedContent)
             .then(() => {
                 setIsCopied(true);
+                setAnnouncement('Content copied to clipboard');
                 setTimeout(() => setIsCopied(false), COPY_SUCCESS_DURATION);
             })
             .catch((err) => {
                 console.error('Failed to copy:', err);
                 setError('Failed to copy to clipboard.');
+                setAnnouncement('Failed to copy to clipboard');
             });
     }, [generatedContent]);
 
@@ -95,6 +110,38 @@ const App: React.FC = () => {
         setGeneratedContent('');
         setError(null);
         setIsCopied(false);
+        setAnnouncement('All fields cleared');
+    }, []);
+
+    const handleRestoreFromHistory = useCallback((item: HistoryItem) => {
+        setTopic(item.topic);
+        setTone(item.tone);
+        setKeywords(item.keywords);
+        setContentLength(item.contentLength);
+        setGeneratedContent(item.generatedContent);
+        setIsHistorySidebarOpen(false);
+        setAnnouncement('Content restored from history');
+        
+        // Focus on main content
+        setTimeout(() => {
+            mainContentRef.current?.focus();
+        }, 100);
+    }, []);
+
+    const handleDeleteHistory = useCallback((id: string) => {
+        deleteHistoryItem(id);
+        setAnnouncement('History item deleted');
+    }, [deleteHistoryItem]);
+
+    const handleClearHistory = useCallback(() => {
+        if (window.confirm('Are you sure you want to clear all history?')) {
+            clearHistory();
+            setAnnouncement('All history cleared');
+        }
+    }, [clearHistory]);
+
+    const skipToMainContent = useCallback(() => {
+        mainContentRef.current?.focus();
     }, []);
 
     // Keyboard shortcut for generate (Ctrl/Cmd + Enter)
@@ -112,22 +159,71 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-slate-200 font-sans p-4 sm:p-6 lg:p-8">
-            <main className="max-w-7xl mx-auto">
+            {/* Skip to main content link for accessibility */}
+            <a
+                href="#main-content"
+                onClick={(e) => {
+                    e.preventDefault();
+                    skipToMainContent();
+                }}
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:shadow-lg"
+            >
+                Skip to main content
+            </a>
+
+            {/* Screen reader announcements */}
+            <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="sr-only"
+            >
+                {announcement}
+            </div>
+
+            <main 
+                id="main-content"
+                className="max-w-7xl mx-auto"
+                ref={mainContentRef}
+                tabIndex={-1}
+            >
                 <header className="text-center mb-10">
-                    <h1 className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 pb-2">
-                        AI Content Creator
-                    </h1>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex-1" />
+                        <h1 className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 pb-2">
+                            Content Creator
+                        </h1>
+                        <div className="flex-1 flex justify-end">
+                            <button
+                                onClick={() => setIsHistorySidebarOpen(true)}
+                                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors relative"
+                                aria-label={`Open history sidebar. ${history.length} items in history`}
+                                title="View History"
+                            >
+                                <Icon name="history" className="w-6 h-6" />
+                                {history.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                        {history.length > 9 ? '9+' : history.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                     <p className="text-slate-400 mt-2 text-lg">
-                        Generate high-quality written content on any topic using the power of Gemini AI.
+                        Generate high-quality written content on any topic using the power of AI.
                     </p>
                     
                     {/* Server Status Indicator */}
                     <div className="mt-4 flex items-center justify-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                            serverStatus === 'online' ? 'bg-green-500' : 
-                            serverStatus === 'offline' ? 'bg-red-500' : 
-                            'bg-yellow-500 animate-pulse'
-                        }`} />
+                        <div 
+                            className={`w-2 h-2 rounded-full ${
+                                serverStatus === 'online' ? 'bg-green-500' : 
+                                serverStatus === 'offline' ? 'bg-red-500' : 
+                                'bg-yellow-500 animate-pulse'
+                            }`}
+                            role="status"
+                            aria-label={`Server status: ${serverStatus}`}
+                        />
                         <span className="text-sm text-slate-500">
                             Server: {serverStatus === 'checking' ? 'Checking...' : serverStatus}
                         </span>
@@ -206,10 +302,11 @@ const App: React.FC = () => {
                                     aria-valuemin={MIN_CONTENT_LENGTH}
                                     aria-valuemax={MAX_CONTENT_LENGTH}
                                     aria-valuenow={contentLength}
+                                    aria-label={`Content length: ${contentLength} words`}
                                 />
                                 <div className="flex justify-between text-xs text-slate-500 mt-1">
-                                    <span>{MIN_CONTENT_LENGTH}</span>
-                                    <span>{MAX_CONTENT_LENGTH}</span>
+                                    <span aria-hidden="true">{MIN_CONTENT_LENGTH}</span>
+                                    <span aria-hidden="true">{MAX_CONTENT_LENGTH}</span>
                                 </div>
                             </div>
                         </div>
@@ -299,6 +396,17 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </main>
+
+            {/* History Sidebar */}
+            <HistorySidebar
+                isOpen={isHistorySidebarOpen}
+                onClose={() => setIsHistorySidebarOpen(false)}
+                history={history}
+                onRestore={handleRestoreFromHistory}
+                onDelete={handleDeleteHistory}
+                onClear={handleClearHistory}
+                onExport={exportHistory}
+            />
         </div>
     );
 };

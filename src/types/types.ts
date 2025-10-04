@@ -30,3 +30,13 @@ export interface ApiError {
   details?: string;
   retryAfter?: number;
 }
+
+export interface HistoryItem {
+  id: string;
+  topic: string;
+  tone: Tone;
+  keywords: string;
+  contentLength: number;
+  generatedContent: string;
+  timestamp: number;
+}
