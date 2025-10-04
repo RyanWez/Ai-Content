@@ -261,7 +261,7 @@ const App: React.FC = () => {
 
                         <div 
                             id="generated-output"
-                            className="flex-grow bg-slate-900 border border-slate-700 rounded-lg p-4 overflow-y-auto min-h-[300px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="flex-grow bg-slate-900 border border-slate-700 rounded-lg p-4 overflow-y-auto h-[500px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-500"
                             tabIndex={-1}
                             role="region"
                             aria-live="polite"

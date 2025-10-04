@@ -120,12 +120,12 @@ app.post('/api/generate', rateLimit, async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error generating content:', error);
-    
+
     // Handle specific error types
     if (error.message?.includes('API key')) {
       return res.status(401).json({ error: 'Invalid API key configuration' });
     }
-    
+
     if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       return res.status(429).json({ error: 'API quota exceeded. Please try again later.' });
     }
