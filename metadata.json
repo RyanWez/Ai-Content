@@ -1,0 +1,5 @@
+{
+  "name": "AI Content Creator",
+  "description": "A streamlined web application that enables users to generate high-quality written content on any topic using Google's Gemini AI. Simply provide a topic, select a tone of voice, add optional keywords, and let the AI craft compelling content for you.",
+  "requestFramePermissions": []
+}
