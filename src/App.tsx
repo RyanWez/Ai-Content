@@ -13,7 +13,9 @@ import apiService from './services/apiService';
 import Icon from './components/Icon';
 import CustomSelect from './components/CustomSelect';
 import HistorySidebar from './components/HistorySidebar';
+import ExportModal from './components/ExportModal';
 import { useContentHistory } from './hooks/useContentHistory';
+import { exportToPDF, exportToWord } from './utils/exportUtils';
 
 // Lazy load ReactMarkdown for code splitting
 const ReactMarkdown = lazy(() => import('react-markdown'));
@@ -29,6 +31,7 @@ const App: React.FC = () => {
     const [isCopied, setIsCopied] = useState<boolean>(false);
     const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState<boolean>(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
     const [announcement, setAnnouncement] = useState<string>('');
     
     const mainContentRef = useRef<HTMLDivElement>(null);
@@ -143,6 +146,31 @@ const App: React.FC = () => {
     const skipToMainContent = useCallback(() => {
         mainContentRef.current?.focus();
     }, []);
+
+    const handleExport = useCallback(async (format: 'pdf' | 'word') => {
+        if (!generatedContent) {
+            setError('No content to export');
+            setAnnouncement('Error: No content to export');
+            return;
+        }
+
+        try {
+            setAnnouncement(`Exporting as ${format.toUpperCase()}...`);
+            
+            if (format === 'pdf') {
+                await exportToPDF(generatedContent, topic || 'Untitled');
+            } else {
+                await exportToWord(generatedContent, topic || 'Untitled');
+            }
+            
+            setAnnouncement(`Successfully exported as ${format.toUpperCase()}`);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Export failed';
+            setError(errorMessage);
+            setAnnouncement(`Error: ${errorMessage}`);
+            throw err;
+        }
+    }, [generatedContent, topic]);
 
     // Keyboard shortcut for generate (Ctrl/Cmd + Enter)
     useEffect(() => {
@@ -341,19 +369,30 @@ const App: React.FC = () => {
                     <div className="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-lg font-semibold text-slate-300">Generated Content</h2>
-                            <button
-                                onClick={handleCopyToClipboard}
-                                disabled={!generatedContent || isLoading}
-                                className="p-2 rounded-md bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
-                                aria-label="Copy to clipboard"
-                            >
-                                <Icon name="copy" className="w-5 h-5" />
-                                {isCopied && (
-                                    <span className="absolute -top-8 right-0 bg-green-500 text-white text-xs py-1 px-2 rounded whitespace-nowrap animate-fade-in">
-                                        Copied!
-                                    </span>
-                                )}
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setIsExportModalOpen(true)}
+                                    disabled={!generatedContent || isLoading}
+                                    className="p-2 rounded-md bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    aria-label="Export content"
+                                    title="Export as PDF or Word"
+                                >
+                                    <Icon name="download" className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={handleCopyToClipboard}
+                                    disabled={!generatedContent || isLoading}
+                                    className="p-2 rounded-md bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
+                                    aria-label="Copy to clipboard"
+                                >
+                                    <Icon name="copy" className="w-5 h-5" />
+                                    {isCopied && (
+                                        <span className="absolute -top-8 right-0 bg-green-500 text-white text-xs py-1 px-2 rounded whitespace-nowrap animate-fade-in">
+                                            Copied!
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         <div 
@@ -406,6 +445,14 @@ const App: React.FC = () => {
                 onDelete={handleDeleteHistory}
                 onClear={handleClearHistory}
                 onExport={exportHistory}
+            />
+
+            {/* Export Modal */}
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExport}
+                topic={topic}
             />
         </div>
     );
