@@ -8,7 +8,7 @@
 
 # 🚀 AI Content Creator
 
-**Generate high-quality written content on any topic using the power of Google's Gemini AI 2.5**
+**Generate high-quality written content on any topic using the power of  AI**
 
 [![React](https://img.shields.io/badge/React-19.2.0-61DAFB?style=flat&logo=react&logoColor=white)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
