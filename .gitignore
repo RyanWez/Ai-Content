@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+package-lock.json
+yarn.lock
+yarn-error.log
+yarn-debug.log
 
 # Editor directories and files
 .env.local
