@@ -345,11 +345,19 @@ const parseMarkdownToDocx = (markdown: string, topic: string): Paragraph[] => {
       inTable = false;
     }
 
-    // Headers
-    if (line.startsWith('### ')) {
+    // Headers (check #### before ###, ## before #)
+    if (line.startsWith('#### ')) {
       paragraphs.push(
         new Paragraph({
-          text: line.substring(4),
+          text: stripMarkdown(line.substring(5).trim()),
+          heading: HeadingLevel.HEADING_4,
+          spacing: { before: 150, after: 80 },
+        })
+      );
+    } else if (line.startsWith('### ')) {
+      paragraphs.push(
+        new Paragraph({
+          text: stripMarkdown(line.substring(4).trim()),
           heading: HeadingLevel.HEADING_3,
           spacing: { before: 200, after: 100 },
         })
@@ -357,7 +365,7 @@ const parseMarkdownToDocx = (markdown: string, topic: string): Paragraph[] => {
     } else if (line.startsWith('## ')) {
       paragraphs.push(
         new Paragraph({
-          text: line.substring(3),
+          text: stripMarkdown(line.substring(3).trim()),
           heading: HeadingLevel.HEADING_2,
           spacing: { before: 300, after: 150 },
         })
@@ -365,18 +373,30 @@ const parseMarkdownToDocx = (markdown: string, topic: string): Paragraph[] => {
     } else if (line.startsWith('# ')) {
       paragraphs.push(
         new Paragraph({
-          text: line.substring(2),
+          text: stripMarkdown(line.substring(2).trim()),
           heading: HeadingLevel.HEADING_1,
           spacing: { before: 400, after: 200 },
         })
       );
     }
-    // Lists
+    // Numbered lists
+    else if (line.match(/^\d+\.\s/)) {
+      inList = true;
+      const text = stripMarkdown(line.replace(/^\d+\.\s/, ''));
+      paragraphs.push(
+        new Paragraph({
+          text: text,
+          numbering: { reference: 'default-numbering', level: 0 },
+          spacing: { after: 100 },
+        })
+      );
+    }
+    // Bullet Lists
     else if (line.startsWith('* ') || line.startsWith('- ')) {
       inList = true;
       paragraphs.push(
         new Paragraph({
-          text: line.substring(2),
+          text: stripMarkdown(line.substring(2)),
           bullet: { level: 0 },
           spacing: { after: 100 },
         })
@@ -384,13 +404,23 @@ const parseMarkdownToDocx = (markdown: string, topic: string): Paragraph[] => {
     }
     // Regular paragraphs
     else {
-      const textRuns = parseInlineFormatting(line);
-      paragraphs.push(
-        new Paragraph({
-          children: textRuns,
-          spacing: { after: 200 },
-        })
-      );
+      try {
+        const textRuns = parseInlineFormatting(line);
+        paragraphs.push(
+          new Paragraph({
+            children: textRuns,
+            spacing: { after: 200 },
+          })
+        );
+      } catch (error) {
+        // Fallback to plain text if parsing fails
+        paragraphs.push(
+          new Paragraph({
+            text: stripMarkdown(line),
+            spacing: { after: 200 },
+          })
+        );
+      }
     }
   }
 
@@ -408,7 +438,7 @@ const createTableParagraphs = (rows: string[][]): Paragraph[] => {
 
   rows.forEach((row, index) => {
     const isHeader = index === 0;
-    const cellText = row.join(' | ');
+    const cellText = row.map(cell => stripMarkdown(cell)).join(' | ');
 
     paragraphs.push(
       new Paragraph({
@@ -430,26 +460,54 @@ const createTableParagraphs = (rows: string[][]): Paragraph[] => {
   return paragraphs;
 };
 
-// Helper: Parse inline formatting (bold, italic)
+// Helper: Strip markdown formatting from text
+const stripMarkdown = (text: string): string => {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove bold
+    .replace(/__(.+?)__/g, '$1')      // Remove bold
+    .replace(/\*(.+?)\*/g, '$1')      // Remove italic
+    .replace(/_(.+?)_/g, '$1')        // Remove italic
+    .replace(/`(.+?)`/g, '$1');       // Remove code
+};
+
+// Helper: Parse inline formatting (bold, italic) - Simplified version
 const parseInlineFormatting = (text: string): TextRun[] => {
   const runs: TextRun[] = [];
-  const regex = /(\*\*|__)(.*?)\1|\*(.*?)\*|_(.+?)_|([^*_]+)/g;
-  let match;
 
-  while ((match = regex.exec(text)) !== null) {
-    if (match[2]) {
-      // Bold
-      runs.push(new TextRun({ text: match[2], bold: true }));
-    } else if (match[3] || match[4]) {
-      // Italic
-      runs.push(new TextRun({ text: match[3] || match[4], italics: true }));
-    } else if (match[5]) {
-      // Regular text
-      runs.push(new TextRun({ text: match[5] }));
-    }
+  // Simple approach: just strip markdown and return plain text
+  // This avoids complex parsing issues
+  const cleanText = stripMarkdown(text);
+
+  // Check if original text had bold markers
+  const hasBold = /\*\*(.+?)\*\*|__(.+?)__/.test(text);
+
+  if (hasBold) {
+    // Split by bold markers and create runs
+    const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__)/g);
+    parts.forEach(part => {
+      if (!part) return;
+
+      if (part.startsWith('**') && part.endsWith('**')) {
+        runs.push(new TextRun({ text: part.slice(2, -2), bold: true }));
+      } else if (part.startsWith('__') && part.endsWith('__')) {
+        runs.push(new TextRun({ text: part.slice(2, -2), bold: true }));
+      } else {
+        // Check for italic
+        if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
+          runs.push(new TextRun({ text: part.slice(1, -1), italics: true }));
+        } else if (part.startsWith('_') && part.endsWith('_') && !part.startsWith('__')) {
+          runs.push(new TextRun({ text: part.slice(1, -1), italics: true }));
+        } else {
+          runs.push(new TextRun({ text: part }));
+        }
+      }
+    });
+  } else {
+    // No formatting, just return plain text
+    runs.push(new TextRun({ text: cleanText }));
   }
 
-  return runs.length > 0 ? runs : [new TextRun({ text })];
+  return runs.length > 0 ? runs : [new TextRun({ text: cleanText })];
 };
 
 // Helper: Sanitize filename

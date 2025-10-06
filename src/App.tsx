@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Tone, HistoryItem } from './types/types';
-import { 
-  TONE_OPTIONS, 
-  MIN_CONTENT_LENGTH, 
-  MAX_CONTENT_LENGTH, 
-  DEFAULT_CONTENT_LENGTH,
-  COPY_SUCCESS_DURATION,
-  MAX_TOPIC_LENGTH,
-  MAX_KEYWORDS_LENGTH
+import {
+    TONE_OPTIONS,
+    MIN_CONTENT_LENGTH,
+    MAX_CONTENT_LENGTH,
+    DEFAULT_CONTENT_LENGTH,
+    COPY_SUCCESS_DURATION,
+    MAX_TOPIC_LENGTH,
+    MAX_KEYWORDS_LENGTH
 } from './constants/constants';
 import apiService from './services/apiService';
 import Icon from './components/Icon';
@@ -34,7 +34,7 @@ const App: React.FC = () => {
     const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState<boolean>(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
     const [announcement, setAnnouncement] = useState<string>('');
-    
+
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { history, saveToHistory, deleteHistoryItem, clearHistory, exportHistory } = useContentHistory();
 
@@ -75,7 +75,7 @@ const App: React.FC = () => {
             setGeneratedContent(content);
             saveToHistory(topic.trim(), tone, keywords.trim(), contentLength, content);
             setAnnouncement('Content generated successfully');
-            
+
             // Focus on output section for accessibility
             setTimeout(() => {
                 document.getElementById('generated-output')?.focus();
@@ -92,7 +92,7 @@ const App: React.FC = () => {
 
     const handleCopyToClipboard = useCallback(() => {
         if (!generatedContent) return;
-        
+
         navigator.clipboard.writeText(generatedContent)
             .then(() => {
                 setIsCopied(true);
@@ -125,7 +125,7 @@ const App: React.FC = () => {
         setGeneratedContent(item.generatedContent);
         setIsHistorySidebarOpen(false);
         setAnnouncement('Content restored from history');
-        
+
         // Focus on main content
         setTimeout(() => {
             mainContentRef.current?.focus();
@@ -157,13 +157,13 @@ const App: React.FC = () => {
 
         try {
             setAnnouncement(`Exporting as ${format.toUpperCase()}...`);
-            
+
             if (format === 'pdf') {
                 await exportToPDF(generatedContent, topic || 'Untitled');
             } else {
                 await exportToWord(generatedContent, topic || 'Untitled');
             }
-            
+
             setAnnouncement(`Successfully exported as ${format.toUpperCase()}`);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Export failed';
@@ -210,7 +210,7 @@ const App: React.FC = () => {
                 {announcement}
             </div>
 
-            <main 
+            <main
                 id="main-content"
                 className="max-w-7xl mx-auto"
                 ref={mainContentRef}
@@ -241,15 +241,14 @@ const App: React.FC = () => {
                     <p className="text-slate-400 mt-2 text-lg">
                         Generate high-quality written content on any topic using the power of AI.
                     </p>
-                    
+
                     {/* Server Status Indicator */}
                     <div className="mt-4 flex items-center justify-center gap-2">
-                        <div 
-                            className={`w-2 h-2 rounded-full ${
-                                serverStatus === 'online' ? 'bg-green-500' : 
-                                serverStatus === 'offline' ? 'bg-red-500' : 
-                                'bg-yellow-500 animate-pulse'
-                            }`}
+                        <div
+                            className={`w-2 h-2 rounded-full ${serverStatus === 'online' ? 'bg-green-500' :
+                                serverStatus === 'offline' ? 'bg-red-500' :
+                                    'bg-yellow-500 animate-pulse'
+                                }`}
                             role="status"
                             aria-label={`Server status: ${serverStatus}`}
                         />
@@ -361,7 +360,7 @@ const App: React.FC = () => {
                                 Clear All
                             </button>
                         </div>
-                        
+
                         <p className="text-xs text-slate-500 mt-4 text-center">
                             Tip: Press Ctrl+Enter (Cmd+Enter on Mac) to generate
                         </p>
@@ -397,7 +396,7 @@ const App: React.FC = () => {
                             </div>
                         </div>
 
-                        <div 
+                        <div
                             id="generated-output"
                             className="flex-grow bg-slate-900 border border-slate-700 rounded-lg p-4 overflow-y-auto h-[500px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-500"
                             tabIndex={-1}
