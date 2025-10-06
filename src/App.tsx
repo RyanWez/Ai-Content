@@ -1,4 +1,4 @@
-import React, { useState, useCallback, Suspense, lazy, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Tone, HistoryItem } from './types/types';
 import { 
   TONE_OPTIONS, 
@@ -17,8 +17,9 @@ import ExportModal from './components/ExportModal';
 import { useContentHistory } from './hooks/useContentHistory';
 import { exportToPDF, exportToWord } from './utils/exportUtils';
 
-// Lazy load ReactMarkdown for code splitting
-const ReactMarkdown = lazy(() => import('react-markdown'));
+// Import ReactMarkdown and plugins directly
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const App: React.FC = () => {
     const [topic, setTopic] = useState<string>('');
@@ -287,6 +288,7 @@ const App: React.FC = () => {
                                     Select Tone of Voice
                                 </label>
                                 <CustomSelect
+                                    id="tone"
                                     value={tone}
                                     onChange={setTone}
                                     options={TONE_OPTIONS}
@@ -422,13 +424,9 @@ const App: React.FC = () => {
                             )}
                             {!isLoading && generatedContent && (
                                 <div className="animate-fade-in prose prose-invert max-w-none">
-                                    <Suspense fallback={
-                                        <div className="flex items-center justify-center h-full text-slate-500">
-                                            <Icon name="spinner" className="w-6 h-6" />
-                                        </div>
-                                    }>
-                                        <ReactMarkdown>{generatedContent}</ReactMarkdown>
-                                    </Suspense>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {generatedContent}
+                                    </ReactMarkdown>
                                 </div>
                             )}
                         </div>

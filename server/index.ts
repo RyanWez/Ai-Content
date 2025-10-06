@@ -91,6 +91,15 @@ app.post('/api/generate', rateLimit, async (req: Request, res: Response) => {
       ${keywordInstructions}
       The generated content should be approximately ${sanitizedContentLength} words long.
 
+      IMPORTANT FORMATTING RULES:
+      1. Use proper Markdown formatting with headers (# ## ###), bold (**text**), italic (*text*), lists, and tables
+      2. ALWAYS use Western Arabic numerals (0-9) for all numbers - NEVER use Myanmar numerals (၀-၉)
+      3. For numbered lists, use: 1. 2. 3. etc. (not ၁. ၂. ၃.)
+      4. For any numerical data, statistics, or counts, use: 0123456789 (not ၀၁၂၃၄၅၆၇၈၉)
+      5. Structure content with clear sections using headers
+      6. Use tables where appropriate for comparisons or structured data
+      7. Use bullet points or numbered lists for clarity
+
       Please generate a well-structured, engaging, and informative piece of content. 
       Ensure the tone is consistent throughout. Do not include a title or any preamble like "Here is the content you requested". Just provide the main body of the content.
     `;

@@ -6,9 +6,10 @@ interface CustomSelectProps {
   onChange: (value: Tone) => void;
   options: Tone[];
   disabled?: boolean;
+  id?: string;
 }
 
-const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, disabled = false }) => {
+const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, disabled = false, id }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
@@ -59,10 +60,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, d
     <div ref={selectRef} className="relative">
       <button
         type="button"
+        id={id}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          w-full bg-slate-900 border border-slate-600 rounded-lg p-3 
+          w-full bg-slate-900 border border-slate-600 rounded-lg p-3
           flex items-center justify-between
           transition-all duration-200
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-500 cursor-pointer'}
